@@ -1,6 +1,6 @@
 {
   "name": "tsc-lite",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "tsc --build --watch, but for humans",
   "type": "module",
   "main": "index.js",
