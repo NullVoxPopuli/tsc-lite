@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import execa from 'execa';
 import ora from 'ora';
 import chalk from 'chalk';
@@ -7,10 +8,12 @@ const END_STR = /* Found N errors. */ 'Watching for file changes.';
 const RESTART_STR = 'File change detected.';
 const SUCCESS = 'Found 0 errors.';
 const MAX_CHUNKS = 5;
+const MAX_ERRORS = 15;
 const IGNORE = ['\u001bc'];
 
 let hiddenErrors = 0;
 let printedChunks = 0;
+let printedErrors = 0;
 let spinner;
 
 export async function tsc() {
@@ -56,8 +59,12 @@ function hasEndingText(str) {
 }
 
 function setup(str) {
+  // eslint-disable-next-line node/no-unsupported-features/node-builtins
+  console.clear();
+
   hiddenErrors = 0;
   printedChunks = 0;
+  printedErrors = 0;
 
   if (spinner) {
     spinner.stop();
@@ -69,9 +76,6 @@ function setup(str) {
 }
 
 function end(endingChunk) {
-  hiddenErrors = 0;
-  printedChunks = 0;
-
   /**
    * It's possible we can have errors
    * grouped with the last chunk of output
@@ -84,12 +88,18 @@ function end(endingChunk) {
 
     handleError(rest.reverse().join('\n'));
 
+    spinner.stop();
     spinner.warn(ending.trim());
 
     return;
   }
 
+  if (hiddenErrors > 0) {
+    spinner.info(`${hiddenErrors} errors are hidden...`);
+  }
+
   spinner.warn(endingChunk.trim());
+  spinner.clear();
 }
 
 function handleOverflow(str) {
@@ -105,7 +115,13 @@ function handleError(str) {
     if (!error) continue;
 
     if (hasHeader(error)) {
+      if (printedErrors >= MAX_ERRORS) {
+        hiddenErrors++;
+        continue;
+      }
+
       spinner.fail(recolorizeError(error));
+      printedErrors++;
     } else {
       spinner.stopAndPersist({
         prefixText: '',
